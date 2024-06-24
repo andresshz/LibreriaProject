@@ -14,9 +14,12 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 
 import dev.project.library.services.Usuarios.CustomUserDetailsService;
+import dev.project.library.token.TokenRequestFilter;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 
 @Configuration
@@ -25,6 +28,9 @@ import org.springframework.context.annotation.Bean;
 public class ConfigSecurity {
 
     // # El que se encarga de recibir la peticion.
+
+    @Autowired
+    private TokenRequestFilter bearerFilter;
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
@@ -55,18 +61,12 @@ public class ConfigSecurity {
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
         return httpSecurity
                 .csrf(csrf -> csrf.disable())
-                .httpBasic(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(http -> {
-                    http.requestMatchers(HttpMethod.POST, "/crear-usuario").permitAll();
-                    http.requestMatchers(HttpMethod.POST, "/login").permitAll();
-                    http.requestMatchers(HttpMethod.GET, "/actuator/prometheus").permitAll();
-
-                    http.requestMatchers("/libros/**").hasAnyRole("admin");
-                    http.requestMatchers(HttpMethod.GET, "/reservas-buscar").hasRole("admin"); // Endpoint para pruebas de acceso.
-
+                    http.requestMatchers(HttpMethod.POST, "/crear-usuario","/login","/actuator/prometheus").permitAll();  
+                    http.requestMatchers(HttpMethod.GET, "/reservas-buscar").permitAll();
                     http.anyRequest().authenticated();
-                })
+                }).addFilterBefore(bearerFilter, BasicAuthenticationFilter.class)
                 .build();
     }
 
